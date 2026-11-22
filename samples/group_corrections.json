@@ -1,0 +1,35 @@
+{
+  "group_id": "east-amendments",
+  "base": {
+    "segment_id": "opening", "start": 1, "end": 2,
+    "events": [
+      {"source_id":"base","number":1,"transaction_id":"opening","kind":"write","day":"2026-05-08","station":"east","point":"x","reading":0},
+      {"source_id":"base","number":2,"transaction_id":"opening","kind":"commit","day":"2026-05-08"}
+    ]
+  },
+  "corrections": [
+    {
+      "segment_id": "east-A", "start": 1, "end": 2, "before": {"1": [true, 0]},
+      "events": [
+        {"source_id":"A","number":1,"transaction_id":"amend","kind":"write","day":"2026-05-08","station":"east","point":"x","reading":1},
+        {"source_id":"A","number":2,"transaction_id":"amend","kind":"commit","day":"2026-05-08"},
+        {"source_id":"A","number":3,"transaction_id":"later","kind":"write","day":"2026-05-08","station":"east","point":"y","reading":7},
+        {"source_id":"A","number":4,"transaction_id":"later","kind":"commit","day":"2026-05-08"}
+      ]
+    },
+    {
+      "segment_id": "east-B", "start": 1, "end": 2, "before": {"1": [true, 0]},
+      "events": [
+        {"source_id":"B","number":1,"transaction_id":"amend","kind":"write","day":"2026-05-08","station":"east","point":"x","reading":2},
+        {"source_id":"B","number":2,"transaction_id":"amend","kind":"commit","day":"2026-05-08"}
+      ]
+    },
+    {
+      "segment_id": "east-C", "start": 1, "end": 2, "before": {"1": [true, 2]},
+      "events": [
+        {"source_id":"C","number":1,"transaction_id":"amend","kind":"write","day":"2026-05-08","station":"east","point":"x","reading":0},
+        {"source_id":"C","number":2,"transaction_id":"amend","kind":"commit","day":"2026-05-08"}
+      ]
+    }
+  ]
+}

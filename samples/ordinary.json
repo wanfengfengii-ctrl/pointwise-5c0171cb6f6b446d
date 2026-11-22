@@ -1,0 +1,5 @@
+[
+  {"source_id":"station-feed","number":1,"transaction_id":"daily","kind":"write","day":"2026-05-08","station":"east","point":"zero","reading":0},
+  {"source_id":"station-feed","number":2,"transaction_id":"daily","kind":"write","day":"2026-05-08","station":"east","point":"missing","reading":null},
+  {"source_id":"station-feed","number":3,"transaction_id":"daily","kind":"commit","day":"2026-05-08"}
+]

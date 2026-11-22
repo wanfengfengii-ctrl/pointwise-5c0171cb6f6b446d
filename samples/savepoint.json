@@ -1,0 +1,11 @@
+[
+  {"source_id":"station-feed","number":1,"transaction_id":"baseline","kind":"write","day":"2026-05-08","station":"east","point":"x","reading":10},
+  {"source_id":"station-feed","number":2,"transaction_id":"baseline","kind":"commit","day":"2026-05-08"},
+  {"source_id":"station-feed","number":3,"transaction_id":"correction","kind":"write","day":"2026-05-08","station":"east","point":"x","reading":11},
+  {"source_id":"station-feed","number":4,"transaction_id":"correction","kind":"savepoint","day":"2026-05-08","savepoint":"S"},
+  {"source_id":"station-feed","number":5,"transaction_id":"correction","kind":"write","day":"2026-05-08","station":"east","point":"x","reading":99},
+  {"source_id":"station-feed","number":6,"transaction_id":"correction","kind":"write","day":"2026-05-08","station":"east","point":"y","reading":7},
+  {"source_id":"station-feed","number":7,"transaction_id":"correction","kind":"rollback_to","day":"2026-05-08","savepoint":"S"},
+  {"source_id":"station-feed","number":8,"transaction_id":"correction","kind":"write","day":"2026-05-08","station":"east","point":"x","reading":12},
+  {"source_id":"station-feed","number":9,"transaction_id":"correction","kind":"commit","day":"2026-05-08"}
+]
