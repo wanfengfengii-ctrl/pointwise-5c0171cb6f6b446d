@@ -10,6 +10,8 @@ from warehouse.ledger import (PublishedLedger, find_completion, get_latest_ledge
 from warehouse.materialize import materialize
 from warehouse.storage import write_transaction
 
+from warehouse.groups import publish_group, read_group  # noqa: E402  (re-exported interface)
+
 
 def _check_terminal(terminal: DecodedEvent) -> None:
     if (not isinstance(terminal, DecodedEvent) or not terminal.is_terminal
@@ -28,6 +30,11 @@ def finish(db: Connection, terminal: DecodedEvent) -> PublishedLedger | None:
             if completion.result_id is None:
                 return None
             return get_ledger(db, completion.result_id)
+
+        if db.execute('SELECT 1 FROM correction_segments WHERE source_id = ? AND terminal_number = ?',
+                      (terminal.source_id, terminal.number)).fetchone() is not None:
+            raise InvalidEvent(
+                f'correction terminal {terminal.number} has not been jointly published')
 
         decision = resolve_terminal(db, terminal)
         result = None

@@ -48,6 +48,17 @@ _SCHEMA = (
         CHECK ((kind = 'commit' AND result_id IS NOT NULL) OR
                (kind = 'abort' AND result_id IS NULL))
     )''',
+    '''CREATE TABLE IF NOT EXISTS correction_segments (
+        source_id TEXT NOT NULL, segment_id TEXT NOT NULL,
+        group_id TEXT NOT NULL, request_body TEXT NOT NULL, before_body TEXT NOT NULL,
+        transaction_id TEXT NOT NULL, terminal_number INTEGER NOT NULL, day TEXT NOT NULL,
+        PRIMARY KEY (source_id, segment_id), UNIQUE (source_id, transaction_id),
+        UNIQUE (group_id, source_id)
+    )''',
+    '''CREATE TABLE IF NOT EXISTS group_publications (
+        group_id TEXT PRIMARY KEY, base_id INTEGER NOT NULL,
+        request_body TEXT NOT NULL, receipt_body TEXT NOT NULL
+    )''',
 )
 
 

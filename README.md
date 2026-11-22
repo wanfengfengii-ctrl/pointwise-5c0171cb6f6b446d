@@ -15,6 +15,12 @@
 5. `warehouse.publication.finish(db, terminal)` 消费接纳事务交付的 `DecodedEvent` 终局。已完成后可用 `AcceptReceipt.terminals` 中的同一终局再次调用，取得同一个发布对象或撤销结果 `None`。新终局由 `accept` 交付，前沿、确认和全部发布数据在该段的同一 SQLite 事务中生效。
 6. `review.selection.read(db, result_id)` 按成果号返回固定明细、清单和回执。`review.station_totals.totals(db, result_id, station)` 计算分站账目。`review.reconcile.reconcile(db, result_id, station)` 另返回本站原操作及出处核对结果。源离线和同日再更正后均可按旧号领取。
 
+## 成组勘误
+
+7. `intake.admission.accept_correction(db, group_id, batch, before=None)` 实收一份带前像的勘误段，返回 `AcceptReceipt`（`result_ids` 为空）。前像为事件号到 `(present, reading)` 的字典，`(False, None)`、`(True, None)`、`(True, 0)` 分别表示缺行、缺测和零；条件并入来件身份，同参重投返回原确认。
+8. 确认可经 `intake.collector.collect_segment(..., receiver=...)` 转交，随后用 `feed.retention.acknowledge` 和 `discard_confirmed_prefix` 清源。未联合发账前把该终局交给 `warehouse.publication.finish` 报 `InvalidEvent`。
+9. `warehouse.publication.publish_group(db, group_id, base_id, members)` 在所选同日现行底账上，按能兑现全部前像的任一全序逐件办账，成员账按实际次序排列；返回 `pending`、`unsatisfiable`、`conflict` 或 `published`。同参重投复领唯一首执。`warehouse.publication.read_group(db, group_id)` 只凭组号复领同一回执。
+
 ## 输入和结果口径
 
 `SourceEvent` 的必填字段为 `source_id`、`number`、`transaction_id`、`kind`、`day`。日期采用 `YYYY-MM-DD`，一笔具名事务使用同一个日期，事务名在同源内唯一。事件号为正的 SQLite 有符号整数。每源至多一笔在途事务，首个数据或保存点事件开启事务，终局须对应已有在途事务。源接纳的是串行事务，一段可以跨过事务终局并接续下一笔。

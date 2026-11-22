@@ -4,15 +4,17 @@ from dataclasses import astuple
 from pathlib import Path
 from tempfile import TemporaryDirectory
 
-from contracts import ClearedRange
+from contracts import ClearedRange, ReadingKey
 from feed.events import load_events
 from feed.registry import SourceRegistry
-from feed.retention import discard_confirmed_prefix
+from feed.retention import acknowledge, discard_confirmed_prefix
 from feed.segments import segment
+from intake.admission import accept_correction
 from intake.collector import collect_segment
 from review.reconcile import reconcile
 from review.selection import read
 from review.station_totals import totals
+from warehouse.groups import publish_group, read_group
 from warehouse.initialize import initialize
 from warehouse.storage import open_warehouse
 
@@ -83,10 +85,69 @@ def savepoint(path: Path) -> None:
         }, sort_keys=True))
 
 
+def corrections(path: Path) -> None:
+    import group_fixture
+    case = group_fixture.load_case()
+    key = ReadingKey(case.base.events[0].day, 'east', 'x')
+    base = case.base
+    with closing(open_warehouse(path)) as db:
+        initialize(db)
+        base_id, = collect_segment(db, case.registry, base.source_id, base.start, base.end,
+                                   base.segment_id).result_ids
+        opening = read(db, base_id).rows[key]
+        cleared = []
+        for batch, before in case.corrections:
+            receipt = accept_correction(db, case.group_id, batch, before)
+            acknowledge(case.registry.get(batch.source_id), receipt)
+            cleared.append([batch.source_id,
+                            discard_confirmed_prefix(case.registry.get(batch.source_id)),
+                            read(db, base_id).rows[key]])
+        received = [opening] + [item[2] for item in cleared]
+        assert opening == 0 and all(item[2] == 0 for item in cleared)
+
+    with closing(open_warehouse(path)) as db:
+        members = [(batch.source_id, batch.segment_id) for batch, _ in case.corrections]
+        result = publish_group(db, case.group_id, base_id, members)
+        assert result['status'] == 'published'
+        sequence = [read(db, member['result_id']).rows[key] for member in result['members']]
+        assert sequence == [2, 0, 1]
+        assert [member['before'] for member in result['members']] == [
+            [(1, (True, 0))], [(1, (True, 2))], [(1, (True, 0))]]
+        base_rows = read(db, base_id).rows[key]
+        refetched = read_group(db, case.group_id)
+        swapped = publish_group(db, case.group_id, base_id, list(reversed(members)))
+        tail = read(db, result['members'][-1]['result_id'])
+        tail_rows = {key_.point: value for key_, value in tail.rows.items()
+                     if key_.station == 'east'}
+        print('POINTWISE_SCENARIO ' + json.dumps({
+            'case_id': 'group_corrections',
+            'input': {'base': base_id, 'group': case.group_id,
+                      'received': cleared},
+            'expected': {'opening': received, 'order': ['B', 'C', 'A'], 'x': [2, 0, 1],
+                         'before': [[[1, [True, 0]]], [[1, [True, 2]]], [[1, [True, 0]]]]},
+            'actual': {'opening': received,
+                       'order': [member['source_id'] for member in result['members']],
+                       'x': sequence,
+                       'before': [[[number, list(image)] for number, image in member['before']]
+                                  for member in result['members']]},
+            'downstream_expected': {'base_x': 0, 'tail': {'x': 1}, 'refetch': True,
+                                    'swapped_retake': True, 'issues': []},
+            'downstream_actual': {'base_x': base_rows, 'tail': tail_rows,
+                                  'refetch': refetched == result,
+                                  'swapped_retake': swapped == result,
+                                  'issues': list(reconcile(db, tail.result_id, 'east').issues)},
+            'code_paths': ['intake/corrections.py', 'intake/admission.py', 'warehouse/groups.py',
+                           'warehouse/publication.py', 'feed/retention.py'],
+            'oracle': 'Opening x is 0; B then C then A post 2, 0, 1; the base stays 0; '
+                      'the cleared sources can be re-published only through the group receipt.',
+        }, ensure_ascii=False, sort_keys=True))
+
+
 def main() -> None:
     with TemporaryDirectory(prefix='chengwan-demo-') as directory:
         ordinary(Path(directory) / 'ordinary.sqlite')
         savepoint(Path(directory) / 'savepoint.sqlite')
+        corrections(Path(directory) / 'corrections.sqlite')
 
 
 if __name__ == '__main__':
